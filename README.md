@@ -1,32 +1,67 @@
 # GitLab Registry Image Parameter
 
-Jenkins build parameter that lists **container image tags** from a GitLab Container Registry project.
+Pick a **container image tag** from a GitLab project’s Container Registry when you start a build — no hard-coded versions in the job config.
 
-Pipeline symbol: `gitLabRegistryImage` · Versioning: Jenkins CD (`${changelist}`)
+Pipeline symbol: `gitLabRegistryImage`
 
-## Requirements
+## Screenshots
 
-- Jenkins 2.541.3 or newer (see `pom.xml`)
-- Optional GitLab credentials: **Username with password** or **Secret text** (personal access token)
-- Token scope for private projects: typically `read_registry` / `read_api` (depends on your GitLab setup)
+### Configure the parameter
+
+Point the job at a GitLab project, choose the image name, and verify access with **Test connection**.
+
+![Job configuration with Test connection success](docs/images/config.png)
+
+### Build with Parameters
+
+Tags load on demand when you open the build form; choose a tag and run the job.
+
+![Build with Parameters dropdown of image tags](docs/images/build.png)
+
+## Why this plugin
+
+- Lists tags via **GitLab project APIs** (project URL + image name), not a generic Docker Registry host/path.
+- Works with **self-hosted GitLab** and usual Jenkins credentials (token / username+password).
+- **Lazy loading** on the Build with Parameters page — the job form stays fast until you need the list.
+- **Test connection** on the config screen before the first build.
+
+### Not a duplicate of…
+
+| Plugin | Difference |
+|--------|------------|
+| [Image Tag Parameter](https://plugins.jenkins.io/image-tag-parameter) | Talks to a Docker Registry HTTP API. This plugin uses GitLab’s project + registry APIs. |
+| [Quay Tag Parameter](https://plugins.jenkins.io/quay-tag-parameter) | Quay-specific. This plugin is GitLab-only. |
+| [ORAS Parameters](https://plugins.jenkins.io/oras-parameters) | OCI / ORAS artifact refs. This plugin lists Container Registry **image tags** for a GitLab project. |
+| [GitLab Plugin](https://plugins.jenkins.io/gitlab-plugin) | MRs, webhooks, SCM. This plugin is only a build-parameter dropdown. |
+
+### Sibling plugins
+
+Same UI patterns, different GitLab APIs:
+
+- [gitlab-package-registry-parameter-plugin](https://github.com/mlinops/gitlab-package-registry-parameter-plugin) — Package Registry versions
+- [gitlab-repository-refs-parameter-plugin](https://github.com/mlinops/gitlab-repository-refs-parameter-plugin) — branches / tags
+
+## Quick start
+
+1. Add a Jenkins credential (**Username with password** or **Secret text** / PAT). For private projects, scopes are typically `read_registry` / `read_api`.
+2. In the job: **This project is parameterized** → **Add Parameter** → **GitLab Registry Image Tag**.
+3. Set **Name**, **GitLab Repo URL**, **Image name**; optionally pick credentials and click **Test connection**.
+4. Open **Build with Parameters**, wait for the dropdown to load, select a tag, build.
 
 ## Pipeline example
 
-Generate from **Pipeline Syntax** → Sample Step **`properties: Set job properties`** → **This project is parameterized** → **Add Parameter** → **GitLab Registry Image Tag**.
+Generate from **Pipeline Syntax** → Sample Step **`properties: Set job properties`** → parameterized job → **GitLab Registry Image Tag**.
 
-Required fields: `name`, `repoUrl`, `imageName`. Other fields are optional.
-
-Template: [`examples/PipelineSyntax.gitLabRegistryImage.groovy`](examples/PipelineSyntax.gitLabRegistryImage.groovy)  
-Full job example: [`examples/Jenkinsfile.images.plugin`](examples/Jenkinsfile.images.plugin)
+Required: `name`, `repoUrl`, `imageName`. Other fields are optional.
 
 ```groovy
 properties([
   parameters([
     gitLabRegistryImage(
-      name: 'IMAGE_TAG',
+      name: 'ES_VERSION',
       repoUrl: 'https://gitlab.example/group/project.git',
-      imageName: 'my-service',
-      credentialsId: 'gitlab_api_token',
+      imageName: 'elasticsearch',
+      credentialsId: 'gitlab_token',
       defaultVersion: 'none'
     )
   ])
@@ -35,14 +70,21 @@ properties([
 
 Replace `gitlab.example` with your GitLab host.
 
+More templates: [`examples/PipelineSyntax.gitLabRegistryImage.groovy`](examples/PipelineSyntax.gitLabRegistryImage.groovy), [`examples/Jenkinsfile.images.plugin`](examples/Jenkinsfile.images.plugin)
+
+## Requirements
+
+- Jenkins **2.541.3** or newer (see `pom.xml`)
+- Optional credentials as above
+
 ## Configuration fields
 
 | Field | Description |
 |-------|-------------|
-| `name` | **Required.** Environment variable name (e.g. `IMAGE_TAG`) |
+| `name` | **Required.** Environment variable name (e.g. `ES_VERSION`) |
 | `repoUrl` | **Required.** Project URL (`http://` or `https://`) |
-| `imageName` | **Required.** Docker-style image name in the registry |
-| `description` | Optional plain-text help on the Build With Parameters page |
+| `imageName` | **Required.** Image name in the project registry |
+| `description` | Optional help text on the Build with Parameters page |
 | `credentialsId` | Optional. Empty = public project |
 | `skipSslVerification` | Optional. Disable TLS verification (self-signed) — **insecure** |
 | `defaultVersion` | Optional preselected value; added to the list if missing |
@@ -53,22 +95,16 @@ Replace `gitlab.example` with your GitLab host.
 | `sortMode` | `NONE` / `ASC` / `DESC` / `*_SMART` |
 | `connectTimeoutMs` / `readTimeoutMs` | HTTP timeouts |
 
-**Deprecated:** `include` migrates to `defaultVersion`. Prefer `defaultVersion`.
-
-## Credentials
-
-1. Jenkins → **Manage Credentials** → add **Username with password** or **Secret text**
-2. Select that credential in the parameter form (`credentialsId`)
-3. UI order: **GitLab Repo URL** (+ **Test connection**) → Skip SSL → Credentials
-
-URL validation checks format and blocks unsafe targets; live connectivity is verified with **Test connection**.
-
 ## Security notes
 
-- Build-page AJAX sends only the parameter name (not credentials or URLs in the request body beyond job binding).
+- Build-page AJAX sends only the parameter name (values come from the job’s stored definition).
 - `skipSslVerification=true` enables trust-all TLS — use only for trusted internal GitLab.
 - Loopback, link-local, and cloud metadata addresses are blocked. Private RFC1918 hosts are allowed for typical self-hosted GitLab.
 
 ## License
 
 MIT — see [`LICENSE`](LICENSE).
+
+## Reporting security issues
+
+See [`SECURITY.md`](SECURITY.md).
