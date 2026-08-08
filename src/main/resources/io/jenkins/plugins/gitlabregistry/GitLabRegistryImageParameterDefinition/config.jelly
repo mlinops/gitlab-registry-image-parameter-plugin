@@ -1,0 +1,79 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form" xmlns:c="/lib/credentials">
+  <link rel="stylesheet" type="text/css"
+        href="${rootURL}/plugin/gitlab-registry-image-parameter/css/config.css?v=${descriptor.assetVersion}"/>
+  <script src="${rootURL}/plugin/gitlab-registry-image-parameter/js/crumb.js?v=${descriptor.assetVersion}"/>
+  <script src="${rootURL}/plugin/gitlab-registry-image-parameter/js/config.js?v=${descriptor.assetVersion}"/>
+
+  <div class="gri-config">
+    <f:entry title="Name" field="name">
+      <f:textbox/>
+    </f:entry>
+    <f:entry title="Description" field="description">
+      <f:textarea/>
+    </f:entry>
+
+    <f:entry title="GitLab Repo URL" field="repoUrl">
+      <!--
+        Row 1: URL + Test connection (fixed button width).
+        Row 2: status full-width under the row (does not resize the URL field).
+      -->
+      <div class="gri-repo-url-row">
+        <div class="gri-repo-url-row__input">
+          <f:textbox/>
+        </div>
+        <div class="gri-repo-url-row__btn">
+          <button type="button"
+                  class="jenkins-button gri-test-connection"
+                  data-check-url="${descriptor.descriptorFullUrl}/testConnection"
+                  data-progress="${%Testing…}"
+                  data-title="${%Test connection}">
+            ${%Test connection}
+          </button>
+        </div>
+        <div class="gri-test-connection-status is-empty" aria-live="polite"></div>
+      </div>
+    </f:entry>
+
+    <f:entry title="Skip SSL verification" field="skipSslVerification">
+      <f:checkbox/>
+    </f:entry>
+    <f:entry title="Credentials" field="credentialsId">
+      <c:select/>
+    </f:entry>
+
+    <f:entry title="Image name" field="imageName">
+      <f:textbox/>
+    </f:entry>
+    <f:entry title="Default version" field="defaultVersion">
+      <f:textbox/>
+    </f:entry>
+
+    <f:advanced title="Advanced">
+      <f:entry title="Exclude" field="exclude">
+        <f:textbox/>
+      </f:entry>
+      <f:entry title="Regex" field="regex">
+        <f:textbox/>
+      </f:entry>
+      <f:entry title="Values per page" field="perPage">
+        <f:number default="50"/>
+      </f:entry>
+      <f:entry title="Max Pages" field="maxPages">
+        <f:number default="2"/>
+      </f:entry>
+      <f:entry title="Max values in list" field="maxRows">
+        <f:number default="30"/>
+      </f:entry>
+      <f:entry title="Sort mode" field="sortMode">
+        <f:select default="NONE"/>
+      </f:entry>
+      <f:entry title="Connect timeout (ms)" field="connectTimeoutMs">
+        <f:number default="5000"/>
+      </f:entry>
+      <f:entry title="Read timeout (ms)" field="readTimeoutMs">
+        <f:number default="5000"/>
+      </f:entry>
+    </f:advanced>
+  </div>
+</j:jelly>

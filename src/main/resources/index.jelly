@@ -1,0 +1,4 @@
+<?jelly escape-by-default='true'?>
+<div>
+  Build parameter that lists container image tags from a GitLab Container Registry project.
+</div>

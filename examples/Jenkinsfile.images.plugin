@@ -1,0 +1,56 @@
+// Example for gitlab-registry-image-parameter 1.0-SNAPSHOT
+// Prefer generating via Jenkins → Pipeline Syntax → properties → parameterized
+// See also: PipelineSyntax.gitLabRegistryImage.groovy
+// Required: name, repoUrl, imageName — other fields optional (DataBoundSetter)
+// Replace gitlab.example with your GitLab host.
+
+properties([
+    parameters([
+        gitLabRegistryImage(
+            name: 'DMS_VERSION',
+            description: '''Document Management Service image tag.
+Use none to skip deploy.''',
+            repoUrl: 'https://gitlab.example/group/project.git',
+            skipSslVerification: false,
+            credentialsId: 'gitlab_api_token',
+            imageName: 'document-management-service',
+            defaultVersion: 'none',
+            exclude: '',
+            regex: '',
+            perPage: 50,
+            maxPages: 2,
+            maxRows: 30,
+            sortMode: 'NONE',
+            connectTimeoutMs: 5000,
+            readTimeoutMs: 5000
+        ),
+        gitLabRegistryImage(
+            name: 'PMS_VERSION',
+            description: 'Product Management Service image tag',
+            repoUrl: 'https://gitlab.example/group/project.git',
+            credentialsId: 'gitlab_api_token',
+            imageName: 'product-management-service',
+            defaultVersion: 'none'
+        ),
+        gitLabRegistryImage(
+            name: 'TMS_VERSION',
+            description: 'Task Manager Service image tag',
+            repoUrl: 'https://gitlab.example/group/project.git',
+            credentialsId: 'gitlab_api_token',
+            imageName: 'task-manager-service'
+        )
+    ])
+])
+
+pipeline {
+    agent any
+    stages {
+        stage('Hello') {
+            steps {
+                echo "DMS=${params.DMS_VERSION}"
+                echo "PMS=${params.PMS_VERSION}"
+                echo "TMS=${params.TMS_VERSION}"
+            }
+        }
+    }
+}

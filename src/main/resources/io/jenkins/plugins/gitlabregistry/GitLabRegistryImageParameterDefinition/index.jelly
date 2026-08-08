@@ -1,0 +1,43 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core">
+  <link rel="stylesheet" type="text/css"
+        href="${rootURL}/plugin/gitlab-registry-image-parameter/css/parameter.css?v=${it.descriptor.assetVersion}"/>
+  <script src="${rootURL}/plugin/gitlab-registry-image-parameter/js/crumb.js?v=${it.descriptor.assetVersion}"/>
+  <script src="${rootURL}/plugin/gitlab-registry-image-parameter/js/lazy-tags.js?v=${it.descriptor.assetVersion}"/>
+
+  <j:set var="fetchUrl" value=""/>
+  <j:if test="${!empty(it.fetchTagsUrl)}">
+    <j:set var="fetchUrl" value="${rootURL}/${it.fetchTagsUrl}"/>
+  </j:if>
+  <j:set var="defaultVal" value="${it.resolvedDefault}"/>
+
+  <div class="gri-param" name="parameter">
+    <input type="hidden" name="name" value="${it.name}"/>
+
+    <div class="gri-param__card">
+      <div class="gri-param__header">
+        <div class="gri-param__name">${it.name}</div>
+        <j:if test="${it.description != null and it.description != ''}">
+          <div class="gri-param__desc">${it.description}</div>
+        </j:if>
+      </div>
+      <select class="gri-param__select"
+              name="value"
+              aria-label="${it.name}"
+              data-gri-lazy="true"
+              data-fetch-url="${fetchUrl}"
+              data-descriptor-id="${it.descriptor.id}"
+              data-param-name="${it.name}"
+              data-default-version="${defaultVal}">
+        <j:choose>
+          <j:when test="${defaultVal != ''}">
+            <option value="${defaultVal}" selected="true">${defaultVal}</option>
+          </j:when>
+          <j:otherwise>
+            <option value="" selected="true">— click to load tags —</option>
+          </j:otherwise>
+        </j:choose>
+      </select>
+    </div>
+  </div>
+</j:jelly>
