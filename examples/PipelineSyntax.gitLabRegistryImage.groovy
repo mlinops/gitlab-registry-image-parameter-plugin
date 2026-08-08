@@ -1,4 +1,4 @@
-// Pipeline Syntax / Snippet Generator template for gitlab-registry-image-parameter 1.0-SNAPSHOT
+// Pipeline Syntax / Snippet Generator template for gitlab-registry-image-parameter
 //
 // How to generate in Jenkins UI:
 //   1. Open any Pipeline job → left menu "Pipeline Syntax"

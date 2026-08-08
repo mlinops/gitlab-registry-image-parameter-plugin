@@ -61,7 +61,7 @@ final class GitLabRegistryClient {
     }
 
     /**
-     * Single lightweight check: project readable + registry list readable (1 row).
+     * Connectivity check: project readable and registry list readable (1 row).
      *
      * @return human-readable success details
      */

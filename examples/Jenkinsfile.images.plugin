@@ -1,5 +1,5 @@
-// Example for gitlab-registry-image-parameter 1.0-SNAPSHOT
-// Prefer generating via Jenkins → Pipeline Syntax → properties → parameterized
+// Example for gitlab-registry-image-parameter
+// Example: generate via Jenkins → Pipeline Syntax → properties → parameterized
 // See also: PipelineSyntax.gitLabRegistryImage.groovy
 // Required: name, repoUrl, imageName — other fields optional (DataBoundSetter)
 // Replace gitlab.example with your GitLab host.

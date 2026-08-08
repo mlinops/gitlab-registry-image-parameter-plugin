@@ -764,7 +764,7 @@ public class GitLabRegistryImageParameterDefinition extends SimpleParameterDefin
             } catch (Exception ignored) {
                 // fall through
             }
-            return "1.0-SNAPSHOT";
+            return "999999-SNAPSHOT";
         }
 
         private static URL staticHelpUrl(Klass<?> c, String suffix) {

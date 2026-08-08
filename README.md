@@ -2,7 +2,7 @@
 
 Jenkins build parameter that lists **container image tags** from a GitLab Container Registry project.
 
-Pipeline symbol: `gitLabRegistryImage` · Version: `1.0-SNAPSHOT`
+Pipeline symbol: `gitLabRegistryImage` · Versioning: Jenkins CD (`${changelist}`)
 
 ## Requirements
 
