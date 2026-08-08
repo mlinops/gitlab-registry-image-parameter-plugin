@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>4.88</version>
+        <version>6.2211.v27f680c93c53</version>
         <relativePath/>
     </parent>
 
@@ -21,7 +21,7 @@
         Build parameter that lists container image tags from a GitLab Container Registry project.
         Supports credentials, regex/exclude filters, and lazy loading on the build form.
     </description>
-    <url>https://github.com/mlinops/gitlab-registry-image-parameter-plugin</url>
+    <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
 
     <licenses>
         <license>
@@ -31,15 +31,22 @@
     </licenses>
 
     <scm>
-        <connection>scm:git:https://github.com/mlinops/gitlab-registry-image-parameter-plugin.git</connection>
-        <developerConnection>scm:git:git@github.com:mlinops/gitlab-registry-image-parameter-plugin.git</developerConnection>
-        <url>https://github.com/mlinops/gitlab-registry-image-parameter-plugin</url>
-        <tag>HEAD</tag>
+        <connection>scm:git:https://github.com/jenkinsci/${project.artifactId}-plugin.git</connection>
+        <developerConnection>scm:git:git@github.com:jenkinsci/${project.artifactId}-plugin.git</developerConnection>
+        <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
+        <tag>${scmTag}</tag>
     </scm>
 
     <properties>
         <changelist>999999-SNAPSHOT</changelist>
-        <jenkins.version>2.440.3</jenkins.version>
+        <scmTag>HEAD</scmTag>
+        <jenkins.baseline>2.541</jenkins.baseline>
+        <jenkins.version>${jenkins.baseline}.3</jenkins.version>
+        <hpi.strictBundledArtifacts>true</hpi.strictBundledArtifacts>
+        <banObsoleteDependencyOverrides.skip>false</banObsoleteDependencyOverrides.skip>
+        <ban-junit4-imports.skip>false</ban-junit4-imports.skip>
+        <ban-deprecated-stapler.skip>false</ban-deprecated-stapler.skip>
+        <ban-commons-lang-2.skip>false</ban-commons-lang-2.skip>
     </properties>
 
     <repositories>
@@ -59,8 +66,8 @@
         <dependencies>
             <dependency>
                 <groupId>io.jenkins.tools.bom</groupId>
-                <artifactId>bom-2.440.x</artifactId>
-                <version>3435.v238d66a_043fb_</version>
+                <artifactId>bom-${jenkins.baseline}.x</artifactId>
+                <version>6815.v1fb_2a_fee3765</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
