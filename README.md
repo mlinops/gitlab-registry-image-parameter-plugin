@@ -1,0 +1,1 @@
+# gitlab-registry-image-parameter-plugin
