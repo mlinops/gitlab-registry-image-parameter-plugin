@@ -6,7 +6,7 @@ Pipeline symbol: `gitLabRegistryImage` · Versioning: Jenkins CD (`${changelist}
 
 ## Requirements
 
-- Jenkins 2.440.3 or newer (see `pom.xml`)
+- Jenkins 2.541.3 or newer (see `pom.xml`)
 - Optional GitLab credentials: **Username with password** or **Secret text** (personal access token)
 - Token scope for private projects: typically `read_registry` / `read_api` (depends on your GitLab setup)
 

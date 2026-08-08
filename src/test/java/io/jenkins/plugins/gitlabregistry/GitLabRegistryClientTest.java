@@ -2,9 +2,9 @@ package io.jenkins.plugins.gitlabregistry;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -13,9 +13,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * HTTP client tests using JDK {@link com.sun.net.httpserver.HttpServer}.
@@ -29,7 +29,7 @@ public class GitLabRegistryClientTest {
     private final AtomicReference<String> lastAuth = new AtomicReference<>();
     private final AtomicReference<String> lastPrivateToken = new AtomicReference<>();
 
-    @Before
+    @BeforeEach
     public void startServer() throws IOException {
         System.setProperty(ConnectionTester.ALLOW_LOOPBACK_FOR_TESTS_PROP, "true");
         server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
@@ -48,7 +48,7 @@ public class GitLabRegistryClientTest {
         base = "http://127.0.0.1:" + server.getAddress().getPort();
     }
 
-    @After
+    @AfterEach
     public void stopServer() {
         System.clearProperty(ConnectionTester.ALLOW_LOOPBACK_FOR_TESTS_PROP);
         if (server != null) {

@@ -4,17 +4,17 @@ import hudson.model.ParameterValue;
 import hudson.model.StringParameterValue;
 import hudson.util.FormValidation;
 import net.sf.json.JSONObject;
-import org.junit.Test;
-import org.kohsuke.stapler.StaplerRequest;
+import org.junit.jupiter.api.Test;
+import org.kohsuke.stapler.StaplerRequest2;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class GitLabRegistryImageParameterDefinitionTest {
 
@@ -42,9 +42,9 @@ public class GitLabRegistryImageParameterDefinitionTest {
     public void parseRepoUrl_splitsBaseAndPath() {
         GitLabRegistryImageParameterDefinition.ParsedRepo p =
                 GitLabRegistryImageParameterDefinition.parseRepoUrl(
-                        "https://gitlab.best.local/docker/life-crm/lifecrm-main.git");
-        assertEquals("https://gitlab.best.local", p.base);
-        assertEquals("docker/life-crm/lifecrm-main", p.projectPath);
+                        "https://gitlab.example/group/nested/project.git");
+        assertEquals("https://gitlab.example", p.base);
+        assertEquals("group/nested/project", p.projectPath);
     }
 
     @Test
@@ -172,13 +172,13 @@ public class GitLabRegistryImageParameterDefinitionTest {
     @Test
     public void matchesImage_byNameAndPathSuffix() {
         assertTrue(GitLabRegistryImageParameterDefinition.matchesImage(
-                "document-management-service",
-                "docker/life-crm/lifecrm-main/document-management-service",
-                "document-management-service"));
+                "my-service",
+                "group/project/my-service",
+                "my-service"));
         assertTrue(!GitLabRegistryImageParameterDefinition.matchesImage(
-                "product-management-service",
-                "docker/life-crm/lifecrm-main/product-management-service",
-                "document-management-service"));
+                "other-service",
+                "group/project/other-service",
+                "my-service"));
     }
 
     @Test
@@ -212,10 +212,10 @@ public class GitLabRegistryImageParameterDefinitionTest {
     @Test
     public void createValue_nullOrMissingJsonFallsBackToDefault() {
         GitLabRegistryImageParameterDefinition def = sample();
-        ParameterValue fromNull = def.createValue((StaplerRequest) null, (JSONObject) null);
+        ParameterValue fromNull = def.createValue((StaplerRequest2) null, (JSONObject) null);
         assertEquals("none", ((StringParameterValue) fromNull).getValue());
 
-        ParameterValue fromEmpty = def.createValue((StaplerRequest) null, new JSONObject());
+        ParameterValue fromEmpty = def.createValue((StaplerRequest2) null, new JSONObject());
         assertEquals("none", ((StringParameterValue) fromEmpty).getValue());
     }
 

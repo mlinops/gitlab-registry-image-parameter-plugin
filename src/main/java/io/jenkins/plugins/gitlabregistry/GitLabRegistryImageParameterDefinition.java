@@ -28,13 +28,13 @@ import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.HttpResponses;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.Stapler;
-import org.kohsuke.stapler.StaplerRequest;
-import org.kohsuke.stapler.StaplerResponse;
+import org.kohsuke.stapler.StaplerRequest2;
+import org.kohsuke.stapler.StaplerResponse2;
 import org.kohsuke.stapler.lang.Klass;
 import org.kohsuke.stapler.verb.POST;
 
-import javax.servlet.RequestDispatcher;
-import javax.servlet.ServletException;
+import jakarta.servlet.RequestDispatcher;
+import jakarta.servlet.ServletException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -312,7 +312,7 @@ public class GitLabRegistryImageParameterDefinition extends SimpleParameterDefin
     }
 
     private Job<?, ?> resolveJob() {
-        StaplerRequest req = Stapler.getCurrentRequest();
+        StaplerRequest2 req = Stapler.getCurrentRequest2();
         if (req != null) {
             return req.findAncestorObject(Job.class);
         }
@@ -385,7 +385,7 @@ public class GitLabRegistryImageParameterDefinition extends SimpleParameterDefin
     }
 
     @Override
-    public ParameterValue createValue(StaplerRequest req, JSONObject jo) {
+    public ParameterValue createValue(StaplerRequest2 req, JSONObject jo) {
         if (jo == null || !jo.has("value") || jo.get("value") == null) {
             return getDefaultParameterValue();
         }
@@ -720,7 +720,7 @@ public class GitLabRegistryImageParameterDefinition extends SimpleParameterDefin
          * "(from GitLab Registry Image Parameter)".
          */
         @Override
-        public void doHelp(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException {
+        public void doHelp(StaplerRequest2 req, StaplerResponse2 rsp) throws IOException, ServletException {
             String path = req.getRestOfPath();
             if (path.contains("..")) {
                 throw new ServletException("Illegal path: " + path);
@@ -728,7 +728,7 @@ public class GitLabRegistryImageParameterDefinition extends SimpleParameterDefin
             path = path.replace('/', '-');
 
             for (Klass<?> c = getKlass(); c != null; c = c.getSuperClass()) {
-                RequestDispatcher rd = Stapler.getCurrentRequest().getView(c, "help" + path);
+                RequestDispatcher rd = Stapler.getCurrentRequest2().getView(c, "help" + path);
                 if (rd != null) {
                     rd.forward(req, rsp);
                     return;
@@ -768,7 +768,7 @@ public class GitLabRegistryImageParameterDefinition extends SimpleParameterDefin
         }
 
         private static URL staticHelpUrl(Klass<?> c, String suffix) {
-            Locale locale = Stapler.getCurrentRequest().getLocale();
+            Locale locale = Stapler.getCurrentRequest2().getLocale();
             String base = "help" + suffix;
             URL url = c.getResource(base + '_' + locale.getLanguage() + '_' + locale.getCountry()
                     + '_' + locale.getVariant() + ".html");
@@ -964,9 +964,9 @@ public class GitLabRegistryImageParameterDefinition extends SimpleParameterDefin
         public void doFetchTags(
                 @AncestorInPath Item item,
                 @QueryParameter String name,
-                StaplerResponse rsp) throws IOException {
+                StaplerResponse2 rsp) throws IOException {
             if (item == null) {
-                StaplerRequest req = Stapler.getCurrentRequest();
+                StaplerRequest2 req = Stapler.getCurrentRequest2();
                 if (req != null) {
                     item = req.findAncestorObject(Item.class);
                 }

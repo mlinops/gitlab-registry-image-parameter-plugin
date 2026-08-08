@@ -51,8 +51,7 @@ secrets/
 work/
 .jenkins/
 
-# Internal development artifacts (not for public hosting)
-_AI.md
+# Local IDE / scratch
 .cursor/
 reports/
 ui-baselines/
