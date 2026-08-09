@@ -2,7 +2,7 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:f="/lib/form">
   <st:adjunct includes="io.jenkins.plugins.gitlabregistry.lazy-tags"/>
 
-  <j:set var="fetchUrl" value="${rootURL}/${it.descriptor.currentDescriptorByNameUrl}/${it.descriptor.descriptorUrl}/fetchTags"/>
+  <j:set var="fetchUrl" value="${it.descriptor.fetchTagsHref}"/>
   <j:set var="defaultVal" value="${it.resolvedDefault}"/>
 
   <j:set var="escapeEntryTitleAndDescription" value="false"/>

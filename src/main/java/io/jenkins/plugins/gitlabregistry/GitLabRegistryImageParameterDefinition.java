@@ -584,6 +584,14 @@ public class GitLabRegistryImageParameterDefinition extends SimpleParameterDefin
             return "GitLab Registry Image Tag";
         }
 
+        /** Context-relative href for Build-page AJAX ({@code descriptorByName}/fetchTags). */
+        public String getFetchTagsHref() {
+            StaplerRequest2 req = Stapler.getCurrentRequest2();
+            String root = req != null ? req.getContextPath() : "";
+            return DescriptorHrefs.join(
+                    root, getCurrentDescriptorByNameUrl(), getDescriptorUrl(), "fetchTags");
+        }
+
         private static void checkConfigurePermission(Item item) {
             if (item != null) {
                 item.checkPermission(Item.CONFIGURE);
@@ -746,24 +754,18 @@ public class GitLabRegistryImageParameterDefinition extends SimpleParameterDefin
 
         @POST
         public void doFetchTags(
-                @AncestorInPath Item item,
+                @AncestorInPath Job<?, ?> job,
                 @QueryParameter String name,
                 StaplerResponse2 rsp) throws IOException {
-            if (item == null) {
-                StaplerRequest2 req = Stapler.getCurrentRequest2();
-                if (req != null) {
-                    item = req.findAncestorObject(Item.class);
-                }
-            }
-            if (item == null) {
+            if (job == null) {
                 throw HttpResponses.forbidden();
             }
-            item.checkPermission(Item.BUILD);
+            job.checkPermission(Item.BUILD);
 
             JSONObject json = new JSONObject();
             try {
-                GitLabRegistryImageParameterDefinition def = resolveDefinition(item, name);
-                List<String> tags = def.fetchTags(item);
+                GitLabRegistryImageParameterDefinition def = resolveDefinition(job, name);
+                List<String> tags = def.fetchTags(job);
                 json.put("ok", true);
                 json.put("tags", tags);
                 json.put("defaultVersion", def.getResolvedDefault());
@@ -782,19 +784,18 @@ public class GitLabRegistryImageParameterDefinition extends SimpleParameterDefin
             if (name == null || name.isBlank()) {
                 throw new IOException("parameter name is required");
             }
-            if (!(item instanceof Job)) {
+            if (!(item instanceof Job<?, ?> job)) {
                 throw new IOException("fetchTags requires a Job context");
             }
-            Job<?, ?> job = (Job<?, ?>) item;
             ParametersDefinitionProperty props = job.getProperty(ParametersDefinitionProperty.class);
             if (props == null) {
                 throw new IOException("job has no parameters");
             }
             ParameterDefinition pd = props.getParameterDefinition(name.trim());
-            if (!(pd instanceof GitLabRegistryImageParameterDefinition)) {
+            if (!(pd instanceof GitLabRegistryImageParameterDefinition def)) {
                 throw new IOException("parameter '" + name + "' is not a GitLab Registry Image parameter");
             }
-            return (GitLabRegistryImageParameterDefinition) pd;
+            return def;
         }
     }
 }
