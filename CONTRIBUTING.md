@@ -15,4 +15,5 @@ Use `gitlab.example` (or another fictional host) in examples and docs — do not
 
 - Keep changes focused
 - Add or update unit tests for behavior changes
-- Update `README.md` / `CHANGELOG.md` when user-facing behavior changes
+- Update `README.md` when user-facing behavior changes
+- Prefer pull requests into `main` (do not push directly); use PR labels so release-drafter / Jenkins CD can draft GitHub Releases

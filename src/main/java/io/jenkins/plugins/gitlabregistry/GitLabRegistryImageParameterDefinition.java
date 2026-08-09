@@ -30,22 +30,15 @@ import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.Stapler;
 import org.kohsuke.stapler.StaplerRequest2;
 import org.kohsuke.stapler.StaplerResponse2;
-import org.kohsuke.stapler.lang.Klass;
 import org.kohsuke.stapler.verb.POST;
 
-import jakarta.servlet.RequestDispatcher;
-import jakarta.servlet.ServletException;
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -81,11 +74,7 @@ public class GitLabRegistryImageParameterDefinition extends SimpleParameterDefin
     private final String imageName;
 
     private String credentialsId = "";
-    /**
-     * Legacy Pipeline/XStream field. Always empty after migration;
-     * first value is migrated into {@link #defaultVersion}.
-     * Retained for compatibility; remove in {@code 6.0.0}.
-     */
+    /** Former persisted field; first value copied to {@link #defaultVersion} in {@link #readResolve()}. */
     private List<String> include = Collections.emptyList();
     private String regex = "";
     private String exclude = "";
@@ -96,7 +85,6 @@ public class GitLabRegistryImageParameterDefinition extends SimpleParameterDefin
     private String sortMode = "NONE";
     private int connectTimeoutMs = 5000;
     private int readTimeoutMs = 5000;
-    private boolean skipSslVerification;
 
     /**
      * Pipeline Syntax / DataBound: only required fields.
@@ -107,44 +95,6 @@ public class GitLabRegistryImageParameterDefinition extends SimpleParameterDefin
         super(name);
         this.repoUrl = repoUrl == null ? "" : repoUrl.trim();
         this.imageName = imageName == null ? "" : imageName.trim();
-    }
-
-    /**
-     * Full constructor for tests / XStream migration helpers.
-     * Prefer {@link #GitLabRegistryImageParameterDefinition(String, String, String)} + setters in Pipeline.
-     */
-    @Deprecated
-    public GitLabRegistryImageParameterDefinition(
-            String name,
-            String description,
-            String repoUrl,
-            String credentialsId,
-            String imageName,
-            Object include,
-            String regex,
-            String exclude,
-            String defaultVersion,
-            int perPage,
-            int maxPages,
-            int maxRows,
-            String sortMode,
-            int connectTimeoutMs,
-            int readTimeoutMs,
-            boolean skipSslVerification) {
-        this(name, repoUrl, imageName);
-        setDescription(description);
-        setCredentialsId(credentialsId);
-        setDefaultVersion(defaultVersion);
-        setInclude(include);
-        setRegex(regex);
-        setExclude(exclude);
-        setPerPage(perPage);
-        setMaxPages(maxPages);
-        setMaxRows(maxRows);
-        setSortMode(sortMode);
-        setConnectTimeoutMs(connectTimeoutMs);
-        setReadTimeoutMs(readTimeoutMs);
-        setSkipSslVerification(skipSslVerification);
     }
 
     private Object readResolve() {
@@ -195,19 +145,6 @@ public class GitLabRegistryImageParameterDefinition extends SimpleParameterDefin
         this.credentialsId = credentialsId == null ? "" : credentialsId.trim();
     }
 
-    /**
-     * @deprecated use {@link #setDefaultVersion(String)}; kept for old Pipeline scripts until 6.0.0.
-     */
-    @Deprecated
-    @DataBoundSetter
-    public void setInclude(Object include) {
-        List<String> legacy = normalizeInclude(include);
-        this.include = Collections.emptyList();
-        if ((defaultVersion == null || defaultVersion.isEmpty()) && !legacy.isEmpty()) {
-            this.defaultVersion = legacy.get(0);
-        }
-    }
-
     @DataBoundSetter
     public void setRegex(String regex) {
         this.regex = regex == null ? "" : regex.trim();
@@ -255,11 +192,6 @@ public class GitLabRegistryImageParameterDefinition extends SimpleParameterDefin
         this.readTimeoutMs = clamp(readTimeoutMs, 100, 120_000, 5000);
     }
 
-    @DataBoundSetter
-    public void setSkipSslVerification(boolean skipSslVerification) {
-        this.skipSslVerification = skipSslVerification;
-    }
-
     public String getRepoUrl() {
         return repoUrl;
     }
@@ -270,16 +202,6 @@ public class GitLabRegistryImageParameterDefinition extends SimpleParameterDefin
 
     public String getImageName() {
         return imageName;
-    }
-
-    /**
-     * JavaBeans getter for {@link #setInclude(Object)} so Pipeline Snippet Generator can uninstantiate.
-     *
-     * @deprecated always empty after migration; use {@link #getDefaultVersion()}. Removed in 6.0.0.
-     */
-    @Deprecated
-    public List<String> getInclude() {
-        return include == null ? Collections.emptyList() : include;
     }
 
     public String getRegex() {
@@ -294,29 +216,9 @@ public class GitLabRegistryImageParameterDefinition extends SimpleParameterDefin
         return defaultVersion;
     }
 
-    public boolean isSkipSslVerification() {
-        return skipSslVerification;
-    }
-
-    /** Default for Build preselection (legacy {@code include} already migrated). */
+    /** Effective default for Build preselection. */
     public String getResolvedDefault() {
         return defaultVersion == null ? "" : defaultVersion;
-    }
-
-    public String getFetchTagsUrl() {
-        Job<?, ?> job = resolveJob();
-        if (job == null) {
-            return "";
-        }
-        return job.getUrl() + "descriptorByName/" + getDescriptor().getId() + "/fetchTags";
-    }
-
-    private Job<?, ?> resolveJob() {
-        StaplerRequest2 req = Stapler.getCurrentRequest2();
-        if (req != null) {
-            return req.findAncestorObject(Job.class);
-        }
-        return null;
     }
 
     public int getPerPage() {
@@ -343,19 +245,7 @@ public class GitLabRegistryImageParameterDefinition extends SimpleParameterDefin
         return readTimeoutMs;
     }
 
-    /**
-     * Sync fallback for scripts. Build page uses lazy AJAX instead.
-     *
-     * @deprecated requires {@link Item} context; use {@link #getChoices(Item)} or AJAX {@code fetchTags}.
-     */
-    @Deprecated
-    @NonNull
-    public List<String> getChoices() {
-        List<String> err = new ArrayList<>();
-        err.add(ERROR_PREFIX + " Item context is required to load tags");
-        return err;
-    }
-
+    /** Loads tag choices for the given job context. */
     @NonNull
     public List<String> getChoices(Item context) {
         if (context == null) {
@@ -401,14 +291,6 @@ public class GitLabRegistryImageParameterDefinition extends SimpleParameterDefin
         return value != null && value.trim().startsWith(ERROR_PREFIX);
     }
 
-    /**
-     * @deprecated always requires Job {@link Item}; use {@link #fetchTags(Item)}.
-     */
-    @Deprecated
-    List<String> fetchTags() throws IOException {
-        throw new IOException("fetchTags requires a Job Item context (use Build AJAX fetchTags)");
-    }
-
     List<String> fetchTags(Item context) throws IOException {
         if (context == null) {
             throw new IOException("fetchTags requires a Job Item context");
@@ -424,7 +306,7 @@ public class GitLabRegistryImageParameterDefinition extends SimpleParameterDefin
         String tagsCacheKey = credentialsId + "|" + repoUrl + "|" + imageName.toLowerCase(Locale.ROOT)
                 + "|" + perPage + "|" + maxPages + "|" + maxRows
                 + "|" + regex + "|" + exclude
-                + "|" + resolvedDefault + "|" + sortMode + "|" + skipSslVerification;
+                + "|" + resolvedDefault + "|" + sortMode;
         List<String> cachedTags = RegistryCaches.getTags(tagsCacheKey);
         if (cachedTags != null) {
             return cachedTags;
@@ -432,10 +314,9 @@ public class GitLabRegistryImageParameterDefinition extends SimpleParameterDefin
 
         ParsedRepo parsed = parseRepoUrl(repoUrl);
         String token = resolveToken(credentialsId, context);
-        GitLabRegistryClient client = new GitLabRegistryClient(
-                connectTimeoutMs, readTimeoutMs, skipSslVerification);
+        GitLabRegistryClient client = new GitLabRegistryClient(connectTimeoutMs, readTimeoutMs);
         List<String> tags = client.listTagNames(
-                parsed, token, imageName, perPage, maxPages, credentialsId, skipSslVerification);
+                parsed, token, imageName, perPage, maxPages, credentialsId);
 
         tags = applyRegexFilters(tags, regex, exclude);
         tags = sortTags(tags, sortMode);
@@ -489,36 +370,6 @@ public class GitLabRegistryImageParameterDefinition extends SimpleParameterDefin
         return new ArrayList<>(out);
     }
 
-    static List<String> normalizeInclude(Object raw) {
-        if (raw == null) {
-            return Collections.emptyList();
-        }
-        List<String> out = new ArrayList<>();
-        if (raw instanceof Iterable && !(raw instanceof CharSequence)) {
-            for (Object o : (Iterable<?>) raw) {
-                if (o == null) {
-                    continue;
-                }
-                splitInto(out, o.toString());
-            }
-        } else {
-            splitInto(out, raw.toString());
-        }
-        return out;
-    }
-
-    private static void splitInto(List<String> out, String s) {
-        if (s == null || s.isBlank()) {
-            return;
-        }
-        for (String part : s.split("[,\\n]")) {
-            String t = part.trim();
-            if (!t.isEmpty() && !out.contains(t)) {
-                out.add(t);
-            }
-        }
-    }
-
     static boolean matchesImage(String name, String path, String wanted) {
         if (wanted == null || wanted.isBlank()) {
             return false;
@@ -536,6 +387,24 @@ public class GitLabRegistryImageParameterDefinition extends SimpleParameterDefin
         int slash = p.lastIndexOf('/');
         String last = slash >= 0 ? p.substring(slash + 1) : p;
         return last.equalsIgnoreCase(w);
+    }
+
+
+    /** Drop {@code user:pass@} from {@code scheme://userinfo@host[:port]} so secrets never enter API base URLs. */
+    static String stripUserInfo(String base) {
+        if (base == null || base.isBlank()) {
+            return base;
+        }
+        int scheme = base.indexOf("://");
+        if (scheme < 0) {
+            return base;
+        }
+        int authStart = scheme + 3;
+        int at = base.indexOf('@', authStart);
+        if (at < 0) {
+            return base;
+        }
+        return base.substring(0, authStart) + base.substring(at + 1);
     }
 
     static ParsedRepo parseRepoUrl(String repoUrl) {
@@ -556,7 +425,7 @@ public class GitLabRegistryImageParameterDefinition extends SimpleParameterDefin
             throw new IllegalArgumentException(
                     "GitLab repo URL must include project path, e.g. https://gitlab.example/group/proj");
         }
-        String base = clean.substring(0, pathStart);
+        String base = stripUserInfo(clean.substring(0, pathStart));
         String projectPath = clean.substring(pathStart + 1).replaceAll("^/+", "");
         if (projectPath.isBlank()) {
             throw new IllegalArgumentException(
@@ -715,77 +584,6 @@ public class GitLabRegistryImageParameterDefinition extends SimpleParameterDefin
             return "GitLab Registry Image Tag";
         }
 
-        /**
-         * Serves field/type help without {@code X-Plugin-From}, so the UI tip does not append
-         * "(from GitLab Registry Image Parameter)".
-         */
-        @Override
-        public void doHelp(StaplerRequest2 req, StaplerResponse2 rsp) throws IOException, ServletException {
-            String path = req.getRestOfPath();
-            if (path.contains("..")) {
-                throw new ServletException("Illegal path: " + path);
-            }
-            path = path.replace('/', '-');
-
-            for (Klass<?> c = getKlass(); c != null; c = c.getSuperClass()) {
-                RequestDispatcher rd = Stapler.getCurrentRequest2().getView(c, "help" + path);
-                if (rd != null) {
-                    rd.forward(req, rsp);
-                    return;
-                }
-                URL url = staticHelpUrl(c, path);
-                if (url != null) {
-                    rsp.setContentType("text/html;charset=UTF-8");
-                    try (InputStream in = url.openStream()) {
-                        String literal = new String(in.readAllBytes(), StandardCharsets.UTF_8);
-                        literal = hudson.Util.replaceMacro(
-                                literal, Map.of("rootURL", req.getContextPath()));
-                        rsp.getWriter().print(wrapHelpHtml(literal));
-                    }
-                    return;
-                }
-            }
-            rsp.sendError(404);
-        }
-
-        /** Inline styles loaded from classpath {@code help-inline.css} via {@link HelpHtmlSupport}. */
-        private static String wrapHelpHtml(String literal) {
-            return HelpHtmlSupport.wrap(literal);
-        }
-
-        /** Cache-bust query for webapp assets (pom / plugin version). */
-        public String getAssetVersion() {
-            try {
-                hudson.PluginWrapper pw = Jenkins.get().getPluginManager()
-                        .getPlugin("gitlab-registry-image-parameter");
-                if (pw != null && pw.getVersion() != null && !pw.getVersion().isBlank()) {
-                    return pw.getVersion();
-                }
-            } catch (Exception ignored) {
-                // fall through
-            }
-            return "999999-SNAPSHOT";
-        }
-
-        private static URL staticHelpUrl(Klass<?> c, String suffix) {
-            Locale locale = Stapler.getCurrentRequest2().getLocale();
-            String base = "help" + suffix;
-            URL url = c.getResource(base + '_' + locale.getLanguage() + '_' + locale.getCountry()
-                    + '_' + locale.getVariant() + ".html");
-            if (url != null) {
-                return url;
-            }
-            url = c.getResource(base + '_' + locale.getLanguage() + '_' + locale.getCountry() + ".html");
-            if (url != null) {
-                return url;
-            }
-            url = c.getResource(base + '_' + locale.getLanguage() + ".html");
-            if (url != null) {
-                return url;
-            }
-            return c.getResource(base + ".html");
-        }
-
         private static void checkConfigurePermission(Item item) {
             if (item != null) {
                 item.checkPermission(Item.CONFIGURE);
@@ -832,7 +630,6 @@ public class GitLabRegistryImageParameterDefinition extends SimpleParameterDefin
                 @AncestorInPath Item item,
                 @QueryParameter String repoUrl,
                 @QueryParameter String credentialsId,
-                @QueryParameter boolean skipSslVerification,
                 @QueryParameter String connectTimeoutMs,
                 @QueryParameter String readTimeoutMs) {
             checkConfigurePermission(item);
@@ -846,20 +643,7 @@ public class GitLabRegistryImageParameterDefinition extends SimpleParameterDefin
                 return FormValidation.error(e.getMessage());
             }
             return ConnectionTester.test(
-                    item, parsed, credentialsId, skipSslVerification, connectTimeoutMs, readTimeoutMs);
-        }
-
-        @POST
-        public FormValidation doCheckSkipSslVerification(
-                @AncestorInPath Item item,
-                @QueryParameter boolean value) {
-            checkConfigurePermission(item);
-            if (value) {
-                return FormValidation.warning(
-                        "Insecure: TLS certificate/hostname verification will be skipped. "
-                                + "Use only for trusted internal GitLab. Re-run «Test connection» after changing.");
-            }
-            return FormValidation.ok();
+                    item, parsed, credentialsId, connectTimeoutMs, readTimeoutMs);
         }
 
         @POST

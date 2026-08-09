@@ -86,19 +86,18 @@ More templates: [`examples/PipelineSyntax.gitLabRegistryImage.groovy`](examples/
 | `imageName` | **Required.** Image name in the project registry |
 | `description` | Optional help text on the Build with Parameters page |
 | `credentialsId` | Optional. Empty = public project |
-| `skipSslVerification` | Optional. Disable TLS verification (self-signed) — **insecure** |
 | `defaultVersion` | Optional preselected value; added to the list if missing |
 | `exclude` / `regex` | Optional Java regex to drop / keep tags |
 | `perPage` | Values per API page (1–100, default 50) |
 | `maxPages` | Max pages to fetch (1–50, default 2) |
 | `maxRows` | Max values in the dropdown (1–500, default 30) |
 | `sortMode` | `NONE` / `ASC` / `DESC` / `*_SMART` |
-| `connectTimeoutMs` / `readTimeoutMs` | HTTP timeouts |
+| `connectTimeoutMs` / `readTimeoutMs` | HTTP timeouts for build-time fetch (**Test connection** uses defaults) |
 
 ## Security notes
 
 - Build-page AJAX sends only the parameter name (values come from the job’s stored definition).
-- `skipSslVerification=true` enables trust-all TLS — use only for trusted internal GitLab.
+- For self-signed or internal GitLab, add your company CA to the Jenkins controller JDK truststore (do not disable TLS verification).
 - Loopback, link-local, and cloud metadata addresses are blocked. Private RFC1918 hosts are allowed for typical self-hosted GitLab.
 
 ## License

@@ -1,27 +1,15 @@
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core">
-  <link rel="stylesheet" type="text/css"
-        href="${rootURL}/plugin/gitlab-registry-image-parameter/css/parameter.css?v=${it.descriptor.assetVersion}"/>
-  <script src="${rootURL}/plugin/gitlab-registry-image-parameter/js/crumb.js?v=${it.descriptor.assetVersion}"/>
-  <script src="${rootURL}/plugin/gitlab-registry-image-parameter/js/lazy-tags.js?v=${it.descriptor.assetVersion}"/>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:f="/lib/form">
+  <st:adjunct includes="io.jenkins.plugins.gitlabregistry.lazy-tags"/>
 
-  <j:set var="fetchUrl" value=""/>
-  <j:if test="${!empty(it.fetchTagsUrl)}">
-    <j:set var="fetchUrl" value="${rootURL}/${it.fetchTagsUrl}"/>
-  </j:if>
+  <j:set var="fetchUrl" value="${rootURL}/${it.descriptor.currentDescriptorByNameUrl}/${it.descriptor.descriptorUrl}/fetchTags"/>
   <j:set var="defaultVal" value="${it.resolvedDefault}"/>
 
-  <div class="gri-param" name="parameter">
-    <input type="hidden" name="name" value="${it.name}"/>
-
-    <div class="gri-param__card">
-      <div class="gri-param__header">
-        <div class="gri-param__name">${it.name}</div>
-        <j:if test="${it.description != null and it.description != ''}">
-          <div class="gri-param__desc">${it.description}</div>
-        </j:if>
-      </div>
-      <select class="gri-param__select"
+  <j:set var="escapeEntryTitleAndDescription" value="false"/>
+  <f:entry title="${h.escape(it.name)}" description="${it.formattedDescription}">
+    <div class="jenkins-select" name="parameter">
+      <input type="hidden" name="name" value="${it.name}" />
+      <select class="jenkins-select__input"
               name="value"
               aria-label="${it.name}"
               data-gri-lazy="true"
@@ -39,5 +27,5 @@
         </j:choose>
       </select>
     </div>
-  </div>
+  </f:entry>
 </j:jelly>
