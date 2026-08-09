@@ -45,11 +45,18 @@
     select.appendChild(opt);
   }
 
-  function resolveFetchUrl(select) {
-    var url = select.getAttribute('data-fetch-url');
-    if (url) {
-      return url;
+  /** Strip a leading "//" so the path stays same-origin. */
+  function normalizeJenkinsPath(url) {
+    if (!url) {
+      return '';
     }
+    if (url.indexOf('//') === 0) {
+      return url.substring(1);
+    }
+    return url;
+  }
+
+  function buildFromLocation(select) {
     var descId = select.getAttribute('data-descriptor-id');
     if (!descId) {
       return '';
@@ -61,6 +68,14 @@
       return '';
     }
     return stripped + 'descriptorByName/' + encodeURIComponent(descId) + '/fetchTags';
+  }
+
+  function resolveFetchUrl(select) {
+    var fromPage = buildFromLocation(select);
+    if (fromPage) {
+      return fromPage;
+    }
+    return normalizeJenkinsPath(select.getAttribute('data-fetch-url'));
   }
 
   function loadTags(select) {

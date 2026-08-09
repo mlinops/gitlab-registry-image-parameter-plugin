@@ -44,15 +44,9 @@ final class ConnectionTester {
         try {
             String token = GitLabRegistryImageParameterDefinition.resolveToken(credentialsId, item);
             GitLabRegistryClient client = new GitLabRegistryClient(connectMs, readMs);
-
-            String details = client.probeAccess(parsed, token);
+            client.probeAccess(parsed, token);
             String auth = (token == null || token.isBlank()) ? "anonymous/public" : "with credentials";
-            String msg = "Connection successful (" + auth + ")";
-            if (details != null && !details.isBlank()) {
-                String d = details.length() > 120 ? details.substring(0, 120) + "…" : details;
-                msg = msg + " — " + d;
-            }
-            return FormValidation.ok(msg);
+            return FormValidation.ok("Connection successful (" + auth + ")");
         } catch (Exception e) {
             String msg = e.getMessage();
             if (msg == null) {

@@ -29,11 +29,16 @@ public class GitLabRegistryClientTest {
     private final AtomicInteger registryStatus = new AtomicInteger(200);
     private final AtomicReference<String> lastAuth = new AtomicReference<>();
     private final AtomicReference<String> lastPrivateToken = new AtomicReference<>();
+    private final AtomicInteger redirectFollowHits = new AtomicInteger();
 
     @BeforeEach
     public void startServer() throws IOException {
         System.setProperty(ConnectionTester.ALLOW_LOOPBACK_FOR_TESTS_PROP, "true");
         server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/should-not-follow", exchange -> {
+            redirectFollowHits.incrementAndGet();
+            respond(exchange, 200, "{\"ok\":true}");
+        });
         server.createContext("/api/v4/projects/", exchange -> {
             String path = exchange.getRequestURI().getPath();
             lastAuth.set(exchange.getRequestHeaders().getFirst("Authorization"));
@@ -46,8 +51,14 @@ public class GitLabRegistryClientTest {
                         "[{\"id\":\"7\",\"project_id\":\"42\",\"name\":\"elasticsearch\","
                                 + "\"path\":\"group/proj/elasticsearch\"}]");
             } else {
-                respond(exchange, projectStatus.get(),
-                        "{\"path_with_namespace\":\"group/proj\"}");
+                int status = projectStatus.get();
+                if (status == 302) {
+                    exchange.getResponseHeaders().add("Location", base + "/should-not-follow");
+                    exchange.sendResponseHeaders(302, -1);
+                    exchange.close();
+                    return;
+                }
+                respond(exchange, status, "{\"path_with_namespace\":\"group/proj\"}");
             }
         });
         server.start();
@@ -65,11 +76,9 @@ public class GitLabRegistryClientTest {
     @Test
     public void probeAccess_success_anonymous() throws Exception {
         GitLabRegistryClient client = new GitLabRegistryClient(2000, 2000);
-        String details = client.probeAccess(
+        client.probeAccess(
                 new GitLabRegistryImageParameterDefinition.ParsedRepo(base, "group/proj"),
                 null);
-        assertTrue(details.contains("group/proj"));
-        assertTrue(details.contains("registry list readable"));
         assertEquals(null, lastAuth.get());
         assertEquals(null, lastPrivateToken.get());
     }
@@ -124,6 +133,22 @@ public class GitLabRegistryClientTest {
         } catch (IOException e) {
             assertTrue(e.getMessage().contains("404"));
         }
+    }
+
+    @Test
+    public void probeAccess_doesNotFollowHttp302() {
+        projectStatus.set(302);
+        redirectFollowHits.set(0);
+        GitLabRegistryClient client = new GitLabRegistryClient(2000, 2000);
+        try {
+            client.probeAccess(
+                    new GitLabRegistryImageParameterDefinition.ParsedRepo(base, "group/proj"),
+                    "t");
+            fail("expected IOException");
+        } catch (IOException e) {
+            assertTrue(e.getMessage().contains("302"));
+        }
+        assertEquals(0, redirectFollowHits.get());
     }
 
     @Test

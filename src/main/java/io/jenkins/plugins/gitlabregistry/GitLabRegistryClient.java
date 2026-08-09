@@ -33,22 +33,15 @@ final class GitLabRegistryClient {
 
     /**
      * Connectivity check: project readable and registry list readable (1 row).
-     *
-     * @return human-readable success details
      */
-    String probeAccess(GitLabRegistryImageParameterDefinition.ParsedRepo parsed, String token)
+    void probeAccess(GitLabRegistryImageParameterDefinition.ParsedRepo parsed, String token)
             throws IOException {
         String encodedProject = URLEncoder.encode(parsed.projectPath, StandardCharsets.UTF_8);
-        JsonNode project = httpGetJson(parsed.base + "/api/v4/projects/" + encodedProject, token);
-        String path = text(project, "path_with_namespace");
-        if (path.isBlank()) {
-            path = parsed.projectPath;
-        }
+        httpGetJson(parsed.base + "/api/v4/projects/" + encodedProject, token);
         httpGetJson(
                 parsed.base + "/api/v4/projects/" + encodedProject
                         + "/registry/repositories?per_page=1",
                 token);
-        return "project '" + path + "' reachable; registry list readable (read_api + read_registry)";
     }
 
     List<String> listTagNames(
