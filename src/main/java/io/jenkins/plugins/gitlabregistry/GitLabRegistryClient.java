@@ -2,6 +2,7 @@ package io.jenkins.plugins.gitlabregistry;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import hudson.ProxyConfiguration;
 
 import java.io.IOException;
 import java.net.URI;
@@ -138,7 +139,7 @@ final class GitLabRegistryClient {
             throw new IOException(e.getMessage(), e);
         }
 
-        HttpClient client = HttpClient.newBuilder()
+        HttpClient client = ProxyConfiguration.newHttpClientBuilder()
                 .connectTimeout(Duration.ofMillis(Math.max(1, connectTimeoutMs)))
                 .followRedirects(HttpClient.Redirect.NEVER)
                 .build();
