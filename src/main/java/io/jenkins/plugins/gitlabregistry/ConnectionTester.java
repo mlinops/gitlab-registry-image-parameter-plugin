@@ -3,8 +3,8 @@ package io.jenkins.plugins.gitlabregistry;
 import hudson.model.Item;
 import hudson.util.FormValidation;
 
-import java.net.HttpURLConnection;
 import java.net.InetAddress;
+import java.net.URI;
 import java.net.UnknownHostException;
 import java.util.Locale;
 import java.util.logging.Level;
@@ -37,22 +37,22 @@ final class ConnectionTester {
             Item item,
             GitLabRegistryImageParameterDefinition.ParsedRepo parsed,
             String credentialsId,
-            boolean skipSsl,
             String connectTimeoutRaw,
             String readTimeoutRaw) {
         int connectMs = parseTimeoutOrDefault(connectTimeoutRaw, 5000);
         int readMs = parseTimeoutOrDefault(readTimeoutRaw, 5000);
         try {
             String token = GitLabRegistryImageParameterDefinition.resolveToken(credentialsId, item);
-            if (skipSsl) {
-                LOGGER.log(Level.WARNING,
-                        "GitLab TLS verification disabled (skipSslVerification) for {0}",
-                        parsed.base);
-            }
-            GitLabRegistryClient client = new GitLabRegistryClient(connectMs, readMs, skipSsl);
-            client.probeAccess(parsed, token);
+            GitLabRegistryClient client = new GitLabRegistryClient(connectMs, readMs);
+
+            String details = client.probeAccess(parsed, token);
             String auth = (token == null || token.isBlank()) ? "anonymous/public" : "with credentials";
-            return FormValidation.ok("Connection successful (" + auth + ")");
+            String msg = "Connection successful (" + auth + ")";
+            if (details != null && !details.isBlank()) {
+                String d = details.length() > 120 ? details.substring(0, 120) + "…" : details;
+                msg = msg + " — " + d;
+            }
+            return FormValidation.ok(msg);
         } catch (Exception e) {
             String msg = e.getMessage();
             if (msg == null) {
@@ -78,40 +78,98 @@ final class ConnectionTester {
     }
 
     /**
-     * Blocks loopback / link-local / metadata targets (parse-time, unknown DNS deferred).
-     * Site-local (RFC1918) is allowed — typical for internal GitLab.
+     * Extract host from base URL; supports IPv6 in brackets and hostnames {@code URI.getHost()} rejects
+     * (e.g. underscores). Falls back to manual authority parsing when host is null.
      */
+    static String extractHost(String baseUrl) {
+        if (baseUrl == null || baseUrl.isBlank()) {
+            throw new IllegalArgumentException("GitLab repo URL host is missing");
+        }
+        try {
+            String host = java.net.URI.create(baseUrl).getHost();
+            if (host != null && !host.isBlank()) {
+                return stripIpv6Brackets(host);
+            }
+        } catch (Exception ignored) {
+            // fall through to manual parse
+        }
+        String s = baseUrl.trim();
+        int scheme = s.indexOf("://");
+        if (scheme < 0) {
+            throw new IllegalArgumentException("GitLab repo URL host is invalid");
+        }
+        String authority = s.substring(scheme + 3);
+        int slash = authority.indexOf('/');
+        if (slash >= 0) {
+            authority = authority.substring(0, slash);
+        }
+        int at = authority.lastIndexOf('@');
+        if (at >= 0) {
+            authority = authority.substring(at + 1);
+        }
+        if (authority.startsWith("[")) {
+            int end = authority.indexOf(']');
+            if (end < 0) {
+                throw new IllegalArgumentException("GitLab repo URL host is invalid");
+            }
+            String host = authority.substring(1, end);
+            if (host.isBlank()) {
+                throw new IllegalArgumentException("GitLab repo URL host is missing");
+            }
+            return stripIpv6Brackets(host);
+        }
+        // hostname or IPv4, optional :port — split on last ':' only if looks like port
+        int colon = authority.lastIndexOf(':');
+        String host = colon > 0 ? authority.substring(0, colon) : authority;
+        if (host.isBlank()) {
+            throw new IllegalArgumentException("GitLab repo URL host is missing");
+        }
+        // Reject whitespace / obvious garbage
+        if (host.indexOf(' ') >= 0 || host.indexOf('\\') >= 0) {
+            throw new IllegalArgumentException("GitLab repo URL host is invalid");
+        }
+        return stripIpv6Brackets(host);
+    }
+
+    private static String stripIpv6Brackets(String host) {
+        if (host != null && host.length() >= 2 && host.charAt(0) == '[' && host.charAt(host.length() - 1) == ']') {
+            return host.substring(1, host.length() - 1);
+        }
+        return host;
+    }
+
     static void assertHostAllowed(String baseUrl) {
         assertHostAllowed(baseUrl, DnsPolicy.DEFER_UNKNOWN_HOST);
     }
 
     /**
-     * Re-check host after {@link HttpURLConnection#openConnection()} (DNS rebinding / TOCTOU).
+     * Re-check host for a request/response {@link URI} (DNS rebinding / TOCTOU).
+     * Used with {@code java.net.http.HttpClient} ({@code followRedirects=NEVER}).
      */
-    static void assertHttpConnectionHostAllowed(HttpURLConnection conn) {
-        if (conn == null || conn.getURL() == null) {
-            throw new IllegalArgumentException("GitLab HTTP connection URL is missing");
+    static void assertUriHostAllowed(URI uri) {
+        if (uri == null) {
+            throw new IllegalArgumentException("GitLab HTTP URI is missing");
         }
-        java.net.URL u = conn.getURL();
-        String host = u.getHost();
+        String scheme = uri.getScheme();
+        if (scheme == null
+                || (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme))) {
+            throw new IllegalArgumentException("GitLab HTTP URI scheme is invalid");
+        }
+        String host = uri.getHost();
         if (host == null || host.isBlank()) {
-            throw new IllegalArgumentException("GitLab HTTP connection host is missing");
+            assertHostAllowed(uri.toString(), DnsPolicy.REQUIRE_RESOLVED);
+            return;
         }
-        int port = u.getPort();
-        String authority = port > 0 ? host + ":" + port : host;
-        assertHostAllowed(u.getProtocol() + "://" + authority + "/", DnsPolicy.REQUIRE_RESOLVED);
+        host = stripIpv6Brackets(host);
+        int port = uri.getPort();
+        boolean ipv6 = host.indexOf(':') >= 0;
+        String hostPart = ipv6 ? "[" + host + "]" : host;
+        String authority = port > 0 ? hostPart + ":" + port : hostPart;
+        assertHostAllowed(scheme + "://" + authority + "/", DnsPolicy.REQUIRE_RESOLVED);
     }
 
     static void assertHostAllowed(String baseUrl, DnsPolicy policy) {
-        String host;
-        try {
-            host = java.net.URI.create(baseUrl).getHost();
-        } catch (Exception e) {
-            throw new IllegalArgumentException("GitLab repo URL host is invalid");
-        }
-        if (host == null || host.isBlank()) {
-            throw new IllegalArgumentException("GitLab repo URL host is missing");
-        }
+        String host = extractHost(baseUrl);
         String h = host.toLowerCase(Locale.ROOT);
         boolean testsAllowLoopback = Boolean.getBoolean(ALLOW_LOOPBACK_FOR_TESTS_PROP);
         if (!testsAllowLoopback && isBlockedHostname(h)) {
@@ -152,7 +210,29 @@ final class ConnectionTester {
                 || h.equals("0.0.0.0")
                 || h.equals("::")
                 || h.equals("::1")
-                || h.startsWith("127.");
+                || isIpv4LoopbackLiteral(h);
+    }
+
+    private static boolean isIpv4LoopbackLiteral(String h) {
+        // Only 127.0.0.0/8 dotted quads — do not treat hostnames starting with "127." as loopback.
+        if (!h.startsWith("127.")) {
+            return false;
+        }
+        String[] parts = h.split("\\.");
+        if (parts.length != 4) {
+            return false;
+        }
+        for (String p : parts) {
+            try {
+                int n = Integer.parseInt(p);
+                if (n < 0 || n > 255) {
+                    return false;
+                }
+            } catch (NumberFormatException e) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static boolean isMetadataHostname(String h) {

@@ -1,8 +1,10 @@
 <div>
   <p><b>Optional:</b> HTTP read timeout for GitLab API responses, in milliseconds.</p>
   <p>Integer from <code>100</code> to <code>120000</code>.</p>
+  <p>Used for Build with Parameters fetches. <b>Test connection</b> always uses the default
+  (<code>5000</code> ms) and does not read this Advanced value.</p>
   <p><b>Example:</b></p>
-  <div class="gri-help-nested">
-    <code>5000</code>
-  </div>
+  <p><pre>
+5000
+</pre></p>
 </div>

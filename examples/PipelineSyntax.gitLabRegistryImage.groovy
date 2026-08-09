@@ -26,7 +26,6 @@ properties([
             name: 'PMS_VERSION',
             description: 'Product Management Service image tag',
             repoUrl: 'https://gitlab.example/group/project.git',
-            skipSslVerification: false,
             credentialsId: 'gitlab_api_token',
             imageName: 'product-management-service',
             defaultVersion: 'none'

@@ -19,23 +19,14 @@ import static org.junit.jupiter.api.Assertions.fail;
 public class GitLabRegistryImageParameterDefinitionTest {
 
     private static GitLabRegistryImageParameterDefinition sample() {
-        return new GitLabRegistryImageParameterDefinition(
+        GitLabRegistryImageParameterDefinition def = new GitLabRegistryImageParameterDefinition(
                 "DMS_VERSION",
-                "desc",
                 "https://gitlab.example/group/proj.git",
-                "gitlab_token",
-                "document-management-service",
-                null,
-                "",
-                "",
-                "none",
-                50,
-                2,
-                30,
-                "NONE",
-                5000,
-                5000,
-                false);
+                "document-management-service");
+        def.setDescription("desc");
+        def.setCredentialsId("gitlab_token");
+        def.setDefaultVersion("none");
+        return def;
     }
 
     @Test
@@ -45,6 +36,37 @@ public class GitLabRegistryImageParameterDefinitionTest {
                         "https://gitlab.example/group/nested/project.git");
         assertEquals("https://gitlab.example", p.base);
         assertEquals("group/nested/project", p.projectPath);
+    }
+
+    @Test
+    public void parseRepoUrl_stripsUserInfoFromBase() {
+        GitLabRegistryImageParameterDefinition.ParsedRepo p =
+                GitLabRegistryImageParameterDefinition.parseRepoUrl(
+                        "https://oauth2:glpat-secret@gitlab.example/group/proj.git");
+        assertEquals("https://gitlab.example", p.base);
+        assertEquals("group/proj", p.projectPath);
+        assertFalse(p.base.contains("glpat-secret"));
+        assertFalse(p.base.contains("@"));
+    }
+
+    @Test
+    public void resolveDefinition_rejectsBlankName() {
+        try {
+            GitLabRegistryImageParameterDefinition.DescriptorImpl.resolveDefinition(null, "  ");
+            fail("expected IOException");
+        } catch (IOException e) {
+            assertTrue(e.getMessage().contains("parameter name is required"));
+        }
+    }
+
+    @Test
+    public void resolveDefinition_requiresJobContext() {
+        try {
+            GitLabRegistryImageParameterDefinition.DescriptorImpl.resolveDefinition(null, "ES_VERSION");
+            fail("expected IOException");
+        } catch (IOException e) {
+            assertTrue(e.getMessage().contains("Job context"));
+        }
     }
 
     @Test
@@ -96,24 +118,16 @@ public class GitLabRegistryImageParameterDefinitionTest {
     }
 
     @Test
-    public void ctor_clampsPipelineBypassValues() {
+    public void setters_clampPipelineBypassValues() {
         GitLabRegistryImageParameterDefinition def = new GitLabRegistryImageParameterDefinition(
                 "X",
-                "",
                 "https://gitlab.example/g/p.git",
-                "",
-                "img",
-                null,
-                "",
-                "",
-                "",
-                999,
-                999,
-                9999,
-                "NONE",
-                999_999,
-                999_999,
-                false);
+                "img");
+        def.setPerPage(999);
+        def.setMaxPages(999);
+        def.setMaxRows(9999);
+        def.setConnectTimeoutMs(999_999);
+        def.setReadTimeoutMs(999_999);
         assertEquals(100, def.getPerPage());
         assertEquals(50, def.getMaxPages());
         assertEquals(500, def.getMaxRows());
@@ -249,19 +263,8 @@ public class GitLabRegistryImageParameterDefinitionTest {
     }
 
     @Test
-    public void fetchTags_withoutItem_throws() throws Exception {
-        GitLabRegistryImageParameterDefinition def = sample();
-        try {
-            def.fetchTags();
-            fail("expected IOException");
-        } catch (IOException e) {
-            assertTrue(e.getMessage().toLowerCase().contains("item"));
-        }
-    }
-
-    @Test
-    public void getChoices_withoutItem_returnsError() {
-        List<String> choices = sample().getChoices();
+    public void getChoices_nullContext_returnsError() {
+        List<String> choices = sample().getChoices(null);
         assertTrue(choices.get(0).startsWith("ERROR:"));
     }
 
@@ -287,26 +290,4 @@ public class GitLabRegistryImageParameterDefinitionTest {
         assertEquals("tok", def.getCredentialsId());
     }
 
-    @Test
-    public void legacyInclude_migratesToDefaultWhenEmpty() {
-        GitLabRegistryImageParameterDefinition def = new GitLabRegistryImageParameterDefinition(
-                "X",
-                "",
-                "https://gitlab.example/g/p.git",
-                "c",
-                "img",
-                Arrays.asList("none"),
-                "",
-                "",
-                "",
-                50,
-                2,
-                30,
-                "NONE",
-                5000,
-                5000,
-                false);
-        assertEquals("none", def.getDefaultVersion());
-        assertTrue(def.getInclude().isEmpty());
-    }
 }
